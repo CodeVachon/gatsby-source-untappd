@@ -1,6 +1,6 @@
 {
-  "name": "gatsby-source-untappd",
-  "version": "0.0.0",
+  "name": "gatsby-source-untappd-json",
+  "version": "0.0.1",
   "description": "transforms untappd json export into a datasource ",
   "main": "index.js",
   "author": "Christopher Vachon <code@christophervachon.com>",

@@ -6,13 +6,15 @@ A Gatsby Source to Transform an Untappd JSON Export into a Gatsby GraphQL Data S
 
 1. Install the package with **yarn** or **npm**
 
-`yarn add gatsby-source-untappd-json`
+`yarn add gatsby-source-untappd-json gatsby-source-filesystem gatsby-plugin-sharp gatsby-transformer-sharp`
 
 2. Add to plugins in your gatsby-config.js
 
 ```javascript
 module.exports = {
     plugins: [
+        "gatsby-plugin-sharp",
+        "gatsby-transformer-sharp",
         {
             resolve: "gatsby-source-untappd-json",
             options: {

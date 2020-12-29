@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import path from "path";
 import fetch from "isomorphic-fetch";
+import { createRemoteFileNode } from "gatsby-source-filesystem";
 
 interface IUNTAPPD_VENUE {
     venue_id: string;
@@ -88,20 +89,22 @@ interface IUNTAPPD_JSON_RECORD {
     total_comments: string;
 }
 
+interface IGatsbyNodeActions {
+    createNode: (values: {
+        id: string;
+        parent: string | null;
+        children: [];
+        internal: {
+            type: string;
+            contentDigest: string;
+        };
+        [key: string]: any;
+    }) => any;
+    createTypes: (value: string) => void;
+}
+
 interface IGatsbyNodeSourceNodesArg {
-    actions: {
-        createNode: (values: {
-            id: string;
-            parent: string | null;
-            children: [];
-            internal: {
-                type: string;
-                contentDigest: string;
-            };
-            [key: string]: any;
-        }) => any;
-        createTypes: (value: string) => void;
-    };
+    actions: IGatsbyNodeActions;
     createNodeId: (value: string) => string;
     createContentDigest: (value: any) => any;
 }
@@ -367,4 +370,78 @@ const createSchemaCustomization: IGatsbyNodeCreateSchemaCustomizations = ({
     `);
 };
 
-export { onPreInit, sourceNodes, createSchemaCustomization };
+interface IGatsbyCache {
+    /**
+     * Retrieve cached value
+     * @param key Cache key
+     * @returns Promise resolving to cached value
+     * @example
+     * const value = await cache.get(`unique-key`)
+     */
+    get(key: string): Promise<any>;
+
+    /**
+     * Cache value
+     * @param key Cache key
+     * @param value Value to be cached
+     * @returns Promise resolving to cached value
+     * @example
+     * await cache.set(`unique-key`, value)
+     */
+    set(key: string, value: any): Promise<any>;
+}
+
+interface IGatsbyStore {
+    dispatch: Function;
+    subscribe: Function;
+    getState: Function;
+    replaceReducer: Function;
+}
+
+interface IGatsbyOnCreateNodeArgs {
+    node: {
+        internal: {
+            type: typeof UNTAPPD_CHECKIN;
+        };
+        photo_url: string;
+        id: string;
+        photoUrlSharp___NODE?: string;
+    };
+    actions: IGatsbyNodeActions;
+    createNodeId: (value: string) => string;
+    cache: IGatsbyCache;
+    store: IGatsbyStore;
+    reporter: any;
+}
+type IGatsbyOnCreateNode = (args: IGatsbyOnCreateNodeArgs) => void;
+
+const onCreateNode: IGatsbyOnCreateNode = async ({
+    node, // the node that was just created
+    actions: { createNode },
+    createNodeId,
+    cache,
+    store,
+    reporter
+}) => {
+    if (
+        node.internal.type === UNTAPPD_CHECKIN &&
+        node.photo_url &&
+        String(node.photo_url).length > 0
+    ) {
+        const fileNode = await createRemoteFileNode({
+            // the url of the remote image to generate a node for
+            url: node.photo_url,
+            parentNodeId: node.id,
+            createNode,
+            createNodeId,
+            cache,
+            store,
+            reporter
+        });
+        if (fileNode) {
+            node.photoUrlSharp___NODE = fileNode.id;
+        }
+    }
+};
+
+export { onPreInit, sourceNodes, createSchemaCustomization, onCreateNode };

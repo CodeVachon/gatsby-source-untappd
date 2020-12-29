@@ -1,4 +1,6 @@
 import { readFileSync } from "fs";
+import path from "path";
+import fetch from "isomorphic-fetch";
 
 interface IUNTAPPD_VENUE {
     venue_id: string;
@@ -104,6 +106,9 @@ interface IGatsbyNodeSourceNodesArg {
     createContentDigest: (value: any) => any;
 }
 interface IGatsbyPluginValues {
+    /**
+     * The Path to the Exported JSON File, or URL to the File.
+     */
     src: string;
 }
 type IGatsbyNodeSourceNodes = (
@@ -121,7 +126,10 @@ const UNTAPPD_CHECKIN = "UNTAPPD_CHECK_IN";
 const UNTAPPD_VENUE = "UNTAPPD_VENUE";
 
 const onPreInit = () => {
-    const pkgRaw = readFileSync("./package.json", "utf8");
+    const pkgRaw = readFileSync(
+        path.resolve(__dirname, "package.json"),
+        "utf8"
+    );
     const pkg = JSON.parse(pkgRaw);
     console.info(`Loaded ${pkg.name}:${pkg.version}`);
 };
@@ -129,11 +137,21 @@ const onPreInit = () => {
 const createVenueId = (value: string) =>
     String(value).replace(new RegExp("[^a-z0-9]{1,}", "i"), "").toLowerCase();
 
-const sourceNodes: IGatsbyNodeSourceNodes = (
+const sourceNodes: IGatsbyNodeSourceNodes = async (
     { actions, createNodeId, createContentDigest },
     pluginOptions
 ) => {
-    const recordSetRaw = readFileSync(pluginOptions.src, "utf8");
+    let recordSetRaw: string = "";
+
+    if (pluginOptions.src.match(new RegExp("^http", "i"))) {
+        const response = await fetch(pluginOptions.src);
+        if (!response.ok) {
+            throw new Error("Did not successfully get Untappd JSON File");
+        }
+        recordSetRaw = await response.text();
+    } else {
+        recordSetRaw = readFileSync(pluginOptions.src, "utf8");
+    }
 
     const checkins: IUNTAPPD_CHECK_IN[] = [];
     const beers: IUNTAPPD_BEER[] = [];
